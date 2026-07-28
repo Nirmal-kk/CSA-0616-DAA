@@ -1,0 +1,5 @@
+Explain how time and space complexity interact. Extend the map by adding Performance and Memory Usage nodes. Justify
+why trade-offs are necessary in algorithm design. Interpret how this map supports balanced efficiency.
+
+Explain how subproblem size and count define recurrence. Extend the map with parameters a and b. Justify their role in
+determining complexity. Interpret how this mapping connects design and analysis.
