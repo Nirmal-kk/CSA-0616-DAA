@@ -1,0 +1,173 @@
+# Training data
+train_data = [
+    [("I", "PRON"), ("eat", "VERB"), ("rice", "NOUN")],
+    [("She", "PRON"), ("likes", "VERB"), ("music", "NOUN")],
+    [("The", "DET"), ("dog", "NOUN"), ("barks", "VERB")],
+    [("A", "DET"), ("cat", "NOUN"), ("sleeps", "VERB")]
+]
+
+transition_count = {}
+emission_count = {}
+tag_count = {}
+
+# ------------------------
+# TRAINING
+# ------------------------
+
+for sentence in train_data:
+
+    previous_tag = "START"
+
+    for word, tag in sentence:
+
+        word = word.lower()
+
+        if tag not in tag_count:
+            tag_count[tag] = 0
+
+        tag_count[tag] += 1
+
+        # Emission counts
+
+        if tag not in emission_count:
+            emission_count[tag] = {}
+
+        if word not in emission_count[tag]:
+            emission_count[tag][word] = 0
+
+        emission_count[tag][word] += 1
+
+        # Transition counts
+
+        if previous_tag not in transition_count:
+            transition_count[previous_tag] = {}
+
+        if tag not in transition_count[previous_tag]:
+            transition_count[previous_tag][tag] = 0
+
+        transition_count[previous_tag][tag] += 1
+
+        previous_tag = tag
+
+
+# ------------------------
+# PROBABILITY FUNCTIONS
+# ------------------------
+
+def transition_probability(prev_tag, curr_tag):
+
+    if prev_tag not in transition_count:
+        return 0.0001
+
+    total = sum(transition_count[prev_tag].values())
+
+    count = transition_count[prev_tag].get(curr_tag, 0)
+
+    return count / total
+
+
+def emission_probability(tag, word):
+
+    word = word.lower()
+
+    if tag not in emission_count:
+        return 0.0001
+
+    total = tag_count[tag]
+
+    count = emission_count[tag].get(word, 0)
+
+    if count == 0:
+        return 0.0001
+
+    return count / total
+
+
+# ------------------------
+# VITERBI ALGORITHM
+# ------------------------
+
+def hmm_pos_tag(sentence):
+
+    words = sentence.lower().split()
+
+    tags = list(tag_count.keys())
+
+    viterbi = []
+    backpointer = []
+
+    # First word
+
+    first_scores = {}
+    first_back = {}
+
+    for tag in tags:
+
+        score = (
+            transition_probability("START", tag)
+            * emission_probability(tag, words[0])
+        )
+
+        first_scores[tag] = score
+        first_back[tag] = None
+
+    viterbi.append(first_scores)
+    backpointer.append(first_back)
+
+    # Remaining words
+
+    for i in range(1, len(words)):
+
+        current_scores = {}
+        current_back = {}
+
+        for current_tag in tags:
+
+            best_score = -1
+            best_previous = None
+
+            for previous_tag in tags:
+
+                score = (
+                    viterbi[i - 1][previous_tag]
+                    * transition_probability(previous_tag, current_tag)
+                    * emission_probability(current_tag, words[i])
+                )
+
+                if score > best_score:
+                    best_score = score
+                    best_previous = previous_tag
+
+            current_scores[current_tag] = best_score
+            current_back[current_tag] = best_previous
+
+        viterbi.append(current_scores)
+        backpointer.append(current_back)
+
+    # Find best final tag
+
+    best_tag = max(viterbi[-1], key=viterbi[-1].get)
+
+    result = [best_tag]
+
+    for i in range(len(words) - 1, 0, -1):
+
+        best_tag = backpointer[i][best_tag]
+
+        result.insert(0, best_tag)
+
+    return list(zip(words, result))
+
+
+# ------------------------
+# TEST
+# ------------------------
+
+sentence = input("Enter a sentence: ")
+
+result = hmm_pos_tag(sentence)
+
+print("\nPredicted tags:\n")
+
+for word, tag in result:
+    print(word, "->", tag)
